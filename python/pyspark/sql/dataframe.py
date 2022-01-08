@@ -560,7 +560,6 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
                 raise TypeError(
                     "Parameter 'truncate={}' should be either bool or int.".format(truncate)
                 )
-
             print(self._jdf.showString(n, int_truncate, vertical))
 
     def __repr__(self) -> str:
@@ -769,7 +768,19 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         """
         with SCCallSiteSync(self._sc) as css:
             sock_info = self._jdf.collectToPython()
-        return list(_load_from_socket(sock_info, BatchedSerializer(CPickleSerializer())))
+        return_list = list(_load_from_socket(sock_info, BatchedSerializer(CPickleSerializer())))
+
+        viva_return_list = self.sql_ctx.getVIVAInst().run(self.schema, return_list)
+        print('Return list from VIVA:', viva_return_list)
+        """
+        for r in return_list:
+          if r['sanders_frame'] is None:
+            print('Empty, trigger VIVA')
+            print('Schema:', self.schema)
+        """
+        return viva_return_list
+        #return return_list
+        #return list(_load_from_socket(sock_info, BatchedSerializer(CPickleSerializer())))
 
     def toLocalIterator(self, prefetchPartitions: bool = False) -> Iterator[Row]:
         """

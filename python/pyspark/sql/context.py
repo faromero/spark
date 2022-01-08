@@ -45,6 +45,7 @@ from pyspark.context import SparkContext
 from pyspark.rdd import RDD
 from pyspark.sql.types import AtomicType, DataType, StructType
 from pyspark.sql.streaming import StreamingQueryManager
+from pyspark.sql.viva import VIVA # FRANKY
 from pyspark.conf import SparkConf
 
 if TYPE_CHECKING:
@@ -113,7 +114,7 @@ class SQLContext(object):
                 "Deprecated in 3.0.0. Use SparkSession.builder.getOrCreate() instead.",
                 FutureWarning,
             )
-
+        self._viva = VIVA() # Franky
         self._sc = sparkContext
         self._jsc = self._sc._jsc  # type: ignore[attr-defined]
         self._jvm = self._sc._jvm  # type: ignore[attr-defined]
@@ -130,6 +131,10 @@ class SQLContext(object):
             or SQLContext._instantiatedContext._sc._jsc is None  # type: ignore[attr-defined]
         ):
             SQLContext._instantiatedContext = self
+
+    # Franky
+    def getVIVAInst(self) -> VIVA:
+      return self._viva
 
     @property
     def _ssql_ctx(self) -> JavaObject:
