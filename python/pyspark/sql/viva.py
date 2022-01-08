@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import os
 import sys
 import json
 import warnings
@@ -34,6 +35,8 @@ from typing import (
 from pyspark.context import SparkContext
 from pyspark.sql.types import DataType, StructField, StructType, IntegerType, StringType, Row
 
+import pandas as pd
+
 __all__ = ["VIVA"]
 
 class VIVA(object):
@@ -48,10 +51,19 @@ class VIVA(object):
 
     .. versionadded:: 1.3.0
     """
-
     def __init__(self) -> None:
       # Load in metadata
-      self._video_metadata = 'test'
+      self._video_metadata = self._load_video_metadata()
+      print(self._video_metadata)
+
+    """
+    Load in video metadata.
+    Currently assumes the metadata is serialized into a file called videos_ser.bin.
+    This can ultimately be hooked up to Redis or similar.
+    """
+    def _load_video_metadata(self) -> None:
+      df = pd.read_pickle(os.path.join(os.path.expanduser('~'), 'videos_ser.bin'))
+      return df
 
     def _optimize(self, query_inp: List[Row]) -> List[Row]:
       print('In optimizer')
@@ -75,31 +87,3 @@ class VIVA(object):
 
       return exec_result
 
-def _test() -> None:
-    import doctest
-    from pyspark.sql import SparkSession
-    import pyspark.sql.viva
-
-    viva = viva.VIVA()
-    viva.run([Row(test='hi')])
-    
-    """
-    spark = SparkSession.builder.master("local[4]").appName("sql.column tests").getOrCreate()
-    sc = spark.sparkContext
-    globs["spark"] = spark
-    globs["df"] = sc.parallelize([(2, "Alice"), (5, "Bob")]).toDF(
-        StructType([StructField("age", IntegerType()), StructField("name", StringType())])
-    )
-
-    (failure_count, test_count) = doctest.testmod(
-        pyspark.sql.column,
-        globs=globs,
-        optionflags=doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE | doctest.REPORT_NDIFF,
-    )
-    spark.stop()
-    if failure_count:
-        sys.exit(-1)
-    """
-
-if __name__ == "__main__":
-    _test()
