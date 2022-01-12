@@ -32,7 +32,10 @@ from typing import (
     Union,
 )
 
+from math import ceil
+
 from pyspark.context import SparkContext
+from pyspark.sql.viva_utils import *
 from pyspark.sql.types import DataType, StructField, StructType, IntegerType, StringType, Row
 
 import pandas as pd
@@ -54,7 +57,6 @@ class VIVA(object):
     def __init__(self) -> None:
       # Load in metadata
       self._video_metadata = self._load_video_metadata()
-      print(self._video_metadata)
 
     """
     Load in video metadata.
@@ -69,7 +71,33 @@ class VIVA(object):
       print('In optimizer')
       return query_inp
 
-    def _execute(self, schema: StructType, query_plan: List[Row]) -> List[Row]:
+    def _execute(self, column_to_materialize: str, query_plan: List[Row]) -> List[Row]:
+      # Fetch video
+      bucket_name = 'franky-va-datasets'
+      video_name = 'bernie_clip'
+      blob_name = os.path.join('tvnews_videos', 'viva_vid', video_name + '.mp4')
+      destination_file_name = os.path.join('/tmp', video_name + '.mp4')
+      if not fetch_video(bucket_name=bucket_name, source_blob_name=blob_name, destination_file_name=destination_file_name):
+        print('Failed to fetch video')
+        return []
+
+      # Get FPS
+      fps = 30 #ceil(self._video_metadata.loc[self._video_metadata['Name'] == video_name.split('.')[0], 'FPS'].values[0])
+      prefix = 'frame_'
+      frames_directory = '/tmp/frames_dir'
+      if not decode_video(input_video_path=destination_file_name, video_fps=fps, frame_prefix=prefix, destination_directory=frames_directory):
+        print('Failed to decode video')
+        return []
+
+      # Run inference
+      inf_results = run_inference_yolov5(input_frame_directory=frames_directory)
+
+      # Post-process the results
+      new_rows = postprocess_results_yolov5(column_to_materialize=column_to_materialize, predictions=inf_results)
+
+      return new_rows
+
+    def _execute_dummy(self, schema: StructType, query_plan: List[Row]) -> List[Row]:
       print('In executor')
       data = [(3, [6,9], True)]
       temp_dict = {}
@@ -81,7 +109,7 @@ class VIVA(object):
       query_plan.append(row)
       return query_plan
 
-    def run(self, schema: StructType, query_inp: List[Row]) -> List[Row]:
+    def run(self, schema: str, query_inp: List[Row]) -> List[Row]:
       opt_plan = self._optimize(query_inp)
       exec_result = self._execute(schema, opt_plan)
 

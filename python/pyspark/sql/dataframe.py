@@ -770,15 +770,20 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
             sock_info = self._jdf.collectToPython()
         return_list = list(_load_from_socket(sock_info, BatchedSerializer(CPickleSerializer())))
 
-        viva_return_list = self.sql_ctx.getVIVAInst().run(self.schema, return_list)
-        print('Return list from VIVA:', viva_return_list)
-        """
+        viva_return_list = return_list
         for r in return_list:
-          if r['sanders_frame'] is None:
-            print('Empty, trigger VIVA')
-            print('Schema:', self.schema)
-        """
+          # Find if any column is NULL
+          r_dict = r.asDict()
+          for k,v in r_dict.items():
+            if v is None:
+              print('Empty, trigger VIVA')
+              viva_return_list = self.sql_ctx.getVIVAInst().run(k, return_list)
+              break
+
+        temp_df = DataFrame(self._jdf, self.sql_ctx)
+        #print('Return list from VIVA:', viva_return_list)
         return viva_return_list
+
         #return return_list
         #return list(_load_from_socket(sock_info, BatchedSerializer(CPickleSerializer())))
 
