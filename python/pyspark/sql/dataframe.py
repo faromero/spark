@@ -2928,7 +2928,7 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
             support = 0.01
         return DataFrame(self._jdf.stat().freqItems(_to_seq(self._sc, cols), support), self.sql_ctx)
 
-    def withColumn(self, colName: str, col: Column) -> "DataFrame":
+    def withColumn(self, colName: str, col: Column, colDNN: str = None) -> "DataFrame":
         """
         Returns a new :class:`DataFrame` by adding a column or replacing the
         existing column that has the same name.
@@ -2960,6 +2960,10 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
         """
         if not isinstance(col, Column):
             raise TypeError("col should be Column")
+
+        if colDNN is not None:
+          self.sql_ctx.getVIVAInst().register_virtual_column(colName, colDNN)
+
         return DataFrame(self._jdf.withColumn(colName, col._jc), self.sql_ctx)
 
     def withColumnRenamed(self, existing: str, new: str) -> "DataFrame":

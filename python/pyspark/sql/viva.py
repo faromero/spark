@@ -58,6 +58,10 @@ class VIVA(object):
       # Load in metadata
       self._video_metadata = self._load_video_metadata()
 
+      # Dictionary to track virtual columns and the functions/models they are backed by
+      # {Column : [model1, model2, ...}
+      self._column_to_function = {}
+
     """
     Load in video metadata.
     Currently assumes the metadata is serialized into a file called videos_ser.bin.
@@ -114,4 +118,17 @@ class VIVA(object):
       exec_result = self._execute(schema, opt_plan)
 
       return exec_result
+
+    """
+    Register a virtual column.
+    If the column already exists, the model is added as an option, and is assessed during the optimization phase.
+    """
+    def register_virtual_column(self, column_name: str, model_name: str) -> None:
+      if column_name not in self._column_to_function:
+        self._column_to_function[column_name] = []
+
+      self._column_to_function[column_name].append(model_name)
+
+      print('Column registered:', self._column_to_function)
+
 
